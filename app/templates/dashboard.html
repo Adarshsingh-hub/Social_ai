@@ -1,0 +1,509 @@
+{% extends "base.html" %}
+{% block title %}{{ biz.name }} — Dashboard{% endblock %}
+{% block extra_head %}
+<style>
+.post-card{background:var(--card);border:1px solid var(--border);border-radius:10px;padding:16px;transition:border-color .2s}
+.post-card:hover{border-color:#444}
+.post-card.used{opacity:.45}
+.post-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:10px}
+.post-day{font-size:11px;color:var(--muted);font-weight:600}
+.post-caption{font-size:13px;line-height:1.6;color:var(--text);margin-bottom:10px;white-space:pre-wrap;word-break:break-word}
+.post-hashtags{font-size:11px;color:var(--blue);margin-bottom:10px;word-break:break-all}
+.post-image{font-size:11px;color:var(--muted);font-style:italic;margin-bottom:10px;padding:8px;background:var(--card2);border-radius:6px}
+.post-actions{display:flex;gap:6px;flex-wrap:wrap}
+.type-badge{padding:3px 8px;border-radius:20px;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.5px}
+.type-promo{background:#3a2a1a;color:#f78166}
+.type-tip{background:#1a2a3a;color:#58a6ff}
+.type-testimonial{background:#2a1a3a;color:#bc8cff}
+.type-behind_the_scenes{background:#1a3a2a;color:#25d366}
+.type-festival_offer{background:#3a3a1a;color:#ffd700}
+.type-reel_idea{background:#3a1a2a;color:#ff69b4}
+.type-story_poll{background:#1a3a3a;color:#40e0d0}
+.type-product_spotlight{background:#2a2a1a;color:#daa520}
+.type-customer_love{background:#1a2a1a;color:#98fb98}
+.type-motivational{background:#2a1a1a;color:#ff6347}
+.toolbar{background:var(--card);border:1px solid var(--border);border-radius:12px;padding:16px;margin-bottom:20px}
+.filter-btn{padding:5px 12px;border-radius:20px;font-size:12px;font-weight:600;border:1px solid var(--border);background:transparent;color:var(--muted);cursor:pointer;transition:all .15s}
+.filter-btn.active,.filter-btn:hover{border-color:var(--green);color:var(--green);background:#1a3a2a}
+.loading-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.85);z-index:300;align-items:center;justify-content:center;flex-direction:column;gap:16px}
+.loading-overlay.show{display:flex}
+.loading-text{color:var(--text);font-size:1.1rem;font-weight:600}
+.loading-sub{color:var(--muted);font-size:13px}
+.result-box{background:var(--card2);border:1px solid var(--border);border-radius:8px;padding:12px;margin-top:12px}
+.mb-8{margin-bottom:8px}
+</style>
+{% endblock %}
+
+{% block content %}
+
+<!-- Loading overlay -->
+<div class="loading-overlay" id="loadingOverlay">
+  <div class="spinner" style="width:40px;height:40px;border-width:4px"></div>
+  <div class="loading-text">AI is generating your content...</div>
+  <div class="loading-sub">Creating posts — this takes 30-40 seconds, please wait</div>
+</div>
+
+<!-- Header -->
+<div class="flex-between mb-16">
+  <div>
+    <div class="page-title">{{ biz.name }}</div>
+    <div class="page-sub">
+      {{ biz.category }} &middot; {{ biz.location }} &middot;
+      <span class="badge {% if biz.language == 'hinglish' %}badge-purple{% else %}badge-blue{% endif %}">{{ biz.language }}</span>
+    </div>
+  </div>
+  <div class="flex gap-8">
+    <a href="/business/{{ biz.id }}/edit" class="btn btn-secondary btn-sm">Edit</a>
+    <a href="/business/{{ biz.id }}/strategy" class="btn btn-secondary btn-sm">Strategy</a>
+    {% if posts %}
+    <a href="/business/{{ biz.id }}/export/csv" class="btn btn-secondary btn-sm">CSV</a>
+    <a href="/business/{{ biz.id }}/export/txt" class="btn btn-secondary btn-sm">TXT</a>
+    {% endif %}
+  </div>
+</div>
+
+<!-- Stats -->
+<div class="grid grid-4 mb-16">
+  <div class="card" style="text-align:center">
+    <div class="stat-num">{{ stats.total }}</div>
+    <div class="stat-label">Total Posts</div>
+  </div>
+  <div class="card" style="text-align:center">
+    <div class="stat-num" style="color:var(--blue)">{{ stats.remaining }}</div>
+    <div class="stat-label">Ready to Post</div>
+  </div>
+  <div class="card" style="text-align:center">
+    <div class="stat-num" style="color:var(--muted)">{{ stats.used }}</div>
+    <div class="stat-label">Posted</div>
+  </div>
+  <div class="card" style="text-align:center">
+    <div class="stat-num" style="color:var(--purple)">
+      {% if stats.total > 0 %}{{ ((stats.used / stats.total) * 100) | int }}{% else %}0{% endif %}%
+    </div>
+    <div class="stat-label">Completion</div>
+  </div>
+</div>
+
+<!-- Generate Form -->
+<div class="toolbar mb-16">
+  <div class="flex-between">
+    <div class="card-title" style="margin-bottom:0">Generate Content</div>
+    <button class="btn btn-secondary btn-sm" onclick="showModal('singleModal')">Single Post</button>
+  </div>
+  <div class="divider"></div>
+  <form method="POST" action="/business/{{ biz.id }}/generate" id="generateForm"
+        onsubmit="document.getElementById('loadingOverlay').classList.add('show')">
+    <div class="grid grid-3" style="gap:12px;align-items:end">
+      <div class="form-group" style="margin-bottom:0">
+        <label class="form-label">Number of Posts</label>
+        <select class="form-control" name="num_posts">
+          <option value="7">7 posts (1 week)</option>
+          <option value="15">15 posts (2 weeks)</option>
+          <option value="30" selected>30 posts (1 month)</option>
+        </select>
+      </div>
+      <div class="form-group" style="margin-bottom:0">
+        <label class="form-label">Platform</label>
+        <select class="form-control" name="platform">
+          <option value="instagram">Instagram</option>
+          <option value="whatsapp">WhatsApp</option>
+          <option value="facebook">Facebook</option>
+          <option value="linkedin">LinkedIn</option>
+        </select>
+      </div>
+      <div class="flex gap-8" style="align-items:center;flex-wrap:wrap">
+        <label style="display:flex;align-items:center;gap:6px;font-size:13px;color:var(--muted);cursor:pointer;white-space:nowrap">
+          <input type="checkbox" name="replace_existing" style="accent-color:var(--green)">
+          Replace existing
+        </label>
+        <button type="submit" class="btn btn-primary">Generate</button>
+      </div>
+    </div>
+  </form>
+</div>
+
+<!-- Quick Actions + Filters -->
+<div class="flex gap-8 mb-16" style="flex-wrap:wrap;align-items:center">
+  <button class="btn btn-secondary btn-sm" onclick="showModal('festivalModal')">Festival Post</button>
+  <button class="btn btn-secondary btn-sm" onclick="showModal('variantsModal')">A/B Variants</button>
+  <span style="color:var(--border)">|</span>
+  <button class="filter-btn active" onclick="filterPosts('all',this)">All</button>
+  {% for pt in post_types %}
+  <button class="filter-btn" onclick="filterPosts('{{ pt }}',this)">{{ pt.replace('_',' ').title() }}</button>
+  {% endfor %}
+</div>
+
+<!-- Posts Grid -->
+{% if posts %}
+<div class="grid grid-2" id="postsGrid">
+  {% for post in posts %}
+  <div class="post-card {% if post.is_used %}used{% endif %}" data-type="{{ post.post_type }}" id="post-{{ post.id }}">
+    <div class="post-header">
+      <div class="flex gap-8">
+        <span class="post-day">Day {{ post.day_number }}</span>
+        <span class="type-badge type-{{ post.post_type }}">{{ post.post_type.replace('_',' ') }}</span>
+      </div>
+      <span class="text-muted" style="font-size:11px">{{ post.best_time }}</span>
+    </div>
+
+    <div class="post-caption" id="cap-{{ post.id }}">{{ post.caption | e }}</div>
+
+    {% if post.hashtags %}
+    <div class="post-hashtags" id="tags-{{ post.id }}">{{ post.hashtags | e }}</div>
+    {% else %}
+    <div class="post-hashtags" id="tags-{{ post.id }}" style="display:none"></div>
+    {% endif %}
+
+    {% if post.image_prompt %}
+    <div class="post-image">Image idea: {{ post.image_prompt | e }}</div>
+    {% endif %}
+
+    <div class="post-actions">
+      <button class="btn btn-secondary btn-sm" onclick="copyPost({{ post.id }})">Copy</button>
+      <button class="btn btn-secondary btn-sm" id="used-btn-{{ post.id }}" onclick="toggleUsed({{ post.id }})">
+        {% if post.is_used %}Unmark{% else %}Mark Used{% endif %}
+      </button>
+      <button class="btn btn-secondary btn-sm" onclick="openEdit({{ post.id }})">Edit</button>
+      <button class="btn btn-danger btn-sm" onclick="deletePost({{ post.id }})">Del</button>
+    </div>
+  </div>
+  {% endfor %}
+</div>
+{% else %}
+<div class="card" style="text-align:center;padding:60px 20px">
+  <div style="font-size:3rem;margin-bottom:12px">📭</div>
+  <div style="font-size:1rem;font-weight:600;margin-bottom:8px">No content yet</div>
+  <div class="text-muted">Click Generate above to create your first month of posts</div>
+</div>
+{% endif %}
+
+
+<!-- ── MODALS ────────────────────────────────────────────────── -->
+
+<!-- Single Post Modal -->
+<div class="modal-overlay" id="singleModal">
+  <div class="modal">
+    <button class="close-btn" onclick="hideModal('singleModal')">x</button>
+    <div class="modal-title">Generate Single Post</div>
+    <div class="form-group">
+      <label class="form-label">Post Type</label>
+      <select class="form-control" id="singleType">
+        {% for pt in post_types %}
+        <option value="{{ pt }}">{{ pt.replace('_',' ').title() }}</option>
+        {% endfor %}
+      </select>
+    </div>
+    <div class="form-group">
+      <label class="form-label">Platform</label>
+      <select class="form-control" id="singlePlatform">
+        <option value="instagram">Instagram</option>
+        <option value="whatsapp">WhatsApp</option>
+        <option value="facebook">Facebook</option>
+        <option value="linkedin">LinkedIn</option>
+      </select>
+    </div>
+    <div class="form-group">
+      <label class="form-label">Extra context (optional)</label>
+      <textarea class="form-control" id="singleContext" rows="2"
+        placeholder="e.g. Mention our weekend 20% sale"></textarea>
+    </div>
+    <button class="btn btn-primary w-full" id="singleBtn" onclick="generateSingle(this)">Generate Post</button>
+    <div id="singleResult" style="display:none;margin-top:12px">
+      <div class="divider"></div>
+      <div class="result-box">
+        <div class="post-caption" id="singleCaption"></div>
+        <div class="post-hashtags" id="singleHashtags"></div>
+        <div class="post-image" id="singleImage" style="margin-bottom:0"></div>
+      </div>
+      <button class="btn btn-secondary btn-sm mt-8" onclick="copySingle()">Copy Post</button>
+      <button class="btn btn-secondary btn-sm mt-8" onclick="hideModal('singleModal');location.reload()">Done</button>
+    </div>
+  </div>
+</div>
+
+<!-- Festival Modal -->
+<div class="modal-overlay" id="festivalModal">
+  <div class="modal">
+    <button class="close-btn" onclick="hideModal('festivalModal')">x</button>
+    <div class="modal-title">Festival Post Generator</div>
+    <div class="form-group">
+      <label class="form-label">Select Festival</label>
+      <select class="form-control" id="festivalSelect">
+        {% for f in festivals %}
+        <option value="{{ f }}">{{ f }}</option>
+        {% endfor %}
+      </select>
+    </div>
+    <button class="btn btn-primary w-full" id="festivalBtn" onclick="generateFestival(this)">Generate Festival Post</button>
+    <div id="festivalResult" style="display:none;margin-top:12px">
+      <div class="divider"></div>
+      <div class="result-box">
+        <div class="post-caption" id="festivalCaption"></div>
+        <div class="post-hashtags" id="festivalHashtags"></div>
+        <div class="post-image" id="festivalImage" style="margin-bottom:0"></div>
+      </div>
+      <button class="btn btn-secondary btn-sm mt-8" onclick="copyFestival()">Copy Post</button>
+      <button class="btn btn-secondary btn-sm mt-8" onclick="hideModal('festivalModal');location.reload()">Done</button>
+    </div>
+  </div>
+</div>
+
+<!-- Variants Modal -->
+<div class="modal-overlay" id="variantsModal">
+  <div class="modal">
+    <button class="close-btn" onclick="hideModal('variantsModal')">x</button>
+    <div class="modal-title">A/B Caption Variants</div>
+    <div class="form-group">
+      <label class="form-label">Topic / Prompt</label>
+      <textarea class="form-control" id="variantTopic" rows="2"
+        placeholder="e.g. Announce new product launch with 10% early bird offer"></textarea>
+    </div>
+    <button class="btn btn-primary w-full" id="variantBtn" onclick="generateVariants(this)">Generate 3 Variants</button>
+    <div id="variantsResult" style="margin-top:12px"></div>
+  </div>
+</div>
+
+<!-- Edit Modal -->
+<div class="modal-overlay" id="editModal">
+  <div class="modal">
+    <button class="close-btn" onclick="hideModal('editModal')">x</button>
+    <div class="modal-title">Edit Post</div>
+    <input type="hidden" id="editPostId">
+    <div class="form-group">
+      <label class="form-label">Caption</label>
+      <textarea class="form-control" id="editCaption" rows="7"></textarea>
+    </div>
+    <div class="form-group">
+      <label class="form-label">Hashtags</label>
+      <textarea class="form-control" id="editHashtags" rows="3"></textarea>
+    </div>
+    <button class="btn btn-primary w-full" onclick="saveEdit()">Save Changes</button>
+  </div>
+</div>
+
+{% endblock %}
+
+{% block scripts %}
+<script>
+// @ts-nocheck
+const BIZ_ID = {{ biz.id }};
+
+/* ── Filter ── */
+function filterPosts(type, btn) {
+  document.querySelectorAll('.filter-btn').forEach(function(b) { b.classList.remove('active'); });
+  btn.classList.add('active');
+  document.querySelectorAll('.post-card').forEach(function(card) {
+    card.style.display = (type === 'all' || card.dataset.type === type) ? '' : 'none';
+  });
+}
+
+/* ── Copy post by id ── */
+function copyPost(id) {
+  var caption  = document.getElementById('cap-'  + id) ? document.getElementById('cap-'  + id).innerText : '';
+  var hashtags = document.getElementById('tags-' + id) ? document.getElementById('tags-' + id).innerText : '';
+  var text = caption + (hashtags ? '\n\n' + hashtags : '');
+  navigator.clipboard.writeText(text).then(function() {
+    var btn = document.querySelector('#post-' + id + ' button');
+    var orig = btn.textContent;
+    btn.textContent = 'Copied!';
+    setTimeout(function() { btn.textContent = orig; }, 1500);
+  });
+}
+
+/* ── Toggle used ── */
+async function toggleUsed(id) {
+  var resp = await fetch('/post/' + id + '/toggle', { method: 'POST' });
+  if (!resp.ok) return;
+  var data = await resp.json();
+  var card = document.getElementById('post-' + id);
+  card.classList.toggle('used', data.is_used);
+  var btn = document.getElementById('used-btn-' + id);
+  btn.textContent = data.is_used ? 'Unmark' : 'Mark Used';
+}
+
+/* ── Delete post ── */
+async function deletePost(id) {
+  if (!confirm('Delete this post?')) return;
+  var resp = await fetch('/post/' + id + '/delete', { method: 'POST' });
+  if (resp.ok) document.getElementById('post-' + id).remove();
+}
+
+/* ── Open edit modal ── */
+function openEdit(id) {
+  var caption  = document.getElementById('cap-'  + id) ? document.getElementById('cap-'  + id).innerText : '';
+  var hashtags = document.getElementById('tags-' + id) ? document.getElementById('tags-' + id).innerText : '';
+  document.getElementById('editPostId').value   = id;
+  document.getElementById('editCaption').value  = caption;
+  document.getElementById('editHashtags').value = hashtags;
+  showModal('editModal');
+}
+
+/* ── Save edit ── */
+async function saveEdit() {
+  var id       = document.getElementById('editPostId').value;
+  var caption  = document.getElementById('editCaption').value;
+  var hashtags = document.getElementById('editHashtags').value;
+  var resp = await fetch('/post/' + id + '/edit', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ caption: caption, hashtags: hashtags })
+  });
+  if (!resp.ok) { alert('Save failed.'); return; }
+  var capEl  = document.getElementById('cap-'  + id);
+  var tagsEl = document.getElementById('tags-' + id);
+  if (capEl)  capEl.innerText  = caption;
+  if (tagsEl) { tagsEl.innerText = hashtags; tagsEl.style.display = hashtags ? '' : 'none'; }
+  hideModal('editModal');
+}
+
+/* ── Generate single post ── */
+async function generateSingle(btn) {
+  var type     = document.getElementById('singleType').value;
+  var platform = document.getElementById('singlePlatform').value;
+  var context  = document.getElementById('singleContext').value;
+
+  btn.disabled = true; btn.textContent = 'Generating...';
+
+  var fd = new FormData();
+  fd.append('post_type', type);
+  fd.append('platform',  platform);
+  fd.append('context',   context);
+
+  try {
+    var resp = await fetch('/business/' + BIZ_ID + '/single', { method: 'POST', body: fd });
+    if (!resp.ok) throw new Error('Server error ' + resp.status);
+    var data = await resp.json();
+    if (data.error) throw new Error(data.error);
+
+    document.getElementById('singleCaption').innerText  = data.caption  || '';
+    document.getElementById('singleHashtags').innerText = data.hashtags || '';
+    document.getElementById('singleImage').innerText    = data.image_prompt ? 'Image idea: ' + data.image_prompt : '';
+    document.getElementById('singleResult').style.display = 'block';
+    window._singleData = data;
+  } catch(e) {
+    alert('Generation failed: ' + e.message);
+  }
+
+  btn.disabled = false; btn.textContent = 'Generate Post';
+}
+
+function copySingle() {
+  var d = window._singleData || {};
+  var text = (d.caption || '') + (d.hashtags ? '\n\n' + d.hashtags : '');
+  navigator.clipboard.writeText(text);
+}
+
+/* ── Festival post ── */
+async function generateFestival(btn) {
+  var festival = document.getElementById('festivalSelect').value;
+  btn.disabled = true; btn.textContent = 'Generating...';
+
+  var fd = new FormData();
+  fd.append('festival', festival);
+
+  try {
+    var resp = await fetch('/business/' + BIZ_ID + '/festival', { method: 'POST', body: fd });
+    if (!resp.ok) throw new Error('Server error ' + resp.status);
+    var data = await resp.json();
+    if (data.error) throw new Error(data.error);
+
+    document.getElementById('festivalCaption').innerText  = data.caption  || '';
+    document.getElementById('festivalHashtags').innerText = data.hashtags || '';
+    document.getElementById('festivalImage').innerText    = data.image_prompt ? 'Image idea: ' + data.image_prompt : '';
+    document.getElementById('festivalResult').style.display = 'block';
+    window._festivalData = data;
+  } catch(e) {
+    alert('Generation failed: ' + e.message);
+  }
+
+  btn.disabled = false; btn.textContent = 'Generate Festival Post';
+}
+
+function copyFestival() {
+  var d = window._festivalData || {};
+  var text = (d.caption || '') + (d.hashtags ? '\n\n' + d.hashtags : '');
+  navigator.clipboard.writeText(text);
+}
+
+/* ── A/B Variants ── */
+async function generateVariants(btn) {
+  var topic = document.getElementById('variantTopic').value.trim();
+  if (!topic) { alert('Please enter a topic first.'); return; }
+
+  btn.disabled = true; btn.textContent = 'Generating 3 variants...';
+
+  var fd = new FormData();
+  fd.append('topic',    topic);
+  fd.append('platform', 'instagram');
+
+  try {
+    var resp = await fetch('/business/' + BIZ_ID + '/variants', { method: 'POST', body: fd });
+    if (!resp.ok) throw new Error('Server error ' + resp.status);
+    var data = await resp.json();
+    var variants = data.variants || [];
+
+    var container = document.getElementById('variantsResult');
+    container.innerHTML = '';
+
+    variants.forEach(function(v) {
+      var varId = String(v.variant || '');
+
+      var div = document.createElement('div');
+      div.className = 'result-box mb-8';
+
+      var header = document.createElement('div');
+      header.style.cssText = 'display:flex;justify-content:space-between;margin-bottom:8px';
+
+      var badge = document.createElement('span');
+      badge.className = 'badge badge-blue';
+      badge.textContent = 'Variant ' + varId;
+
+      var hookStyle = document.createElement('span');
+      hookStyle.className = 'text-muted';
+      hookStyle.style.fontSize = '11px';
+      hookStyle.textContent = v.hook_style || '';
+
+      header.appendChild(badge);
+      header.appendChild(hookStyle);
+
+      var caption = document.createElement('div');
+      caption.className = 'post-caption';
+      caption.style.marginBottom = '8px';
+      caption.id = 'var-cap-' + varId;
+      caption.textContent = v.caption || '';
+
+      var hashtags = document.createElement('div');
+      hashtags.className = 'post-hashtags';
+      hashtags.id = 'var-tags-' + varId;
+      hashtags.textContent = v.hashtags || '';
+
+      var copyBtn = document.createElement('button');
+      copyBtn.className = 'btn btn-secondary btn-sm';
+      copyBtn.textContent = 'Copy';
+      copyBtn.onclick = (function(vid) {
+        return function() { copyVariant(vid); };
+      })(varId);
+
+      div.appendChild(header);
+      div.appendChild(caption);
+      div.appendChild(hashtags);
+      div.appendChild(copyBtn);
+      container.appendChild(div);
+    });
+
+    window._variantsData = variants;
+  } catch(e) {
+    alert('Generation failed: ' + e.message);
+  }
+
+  btn.disabled = false; btn.textContent = 'Generate 3 Variants';
+}
+
+function copyVariant(variantId) {
+  var capEl  = document.getElementById('var-cap-'  + variantId);
+  var tagsEl = document.getElementById('var-tags-' + variantId);
+  var text = (capEl ? capEl.innerText : '') + (tagsEl && tagsEl.innerText ? '\n\n' + tagsEl.innerText : '');
+  navigator.clipboard.writeText(text);
+}
+</script>
+{% endblock %}

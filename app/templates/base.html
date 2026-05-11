@@ -1,0 +1,112 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>{% block title %}AI Social Media Engine{% endblock %}</title>
+<style>
+:root{--bg:#0d1117;--card:#161b22;--card2:#1c2333;--border:#30363d;--green:#25d366;--green2:#1aab52;--blue:#58a6ff;--purple:#bc8cff;--orange:#f78166;--text:#e6edf3;--muted:#7d8590;--red:#f85149}
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;background:var(--bg);color:var(--text);min-height:100vh;font-size:14px}
+a{color:var(--blue);text-decoration:none}
+a:hover{text-decoration:underline}
+.navbar{background:var(--card);border-bottom:1px solid var(--border);padding:12px 24px;display:flex;align-items:center;gap:16px;position:sticky;top:0;z-index:100}
+.navbar-brand{font-size:1.1rem;font-weight:700;color:var(--green);display:flex;align-items:center;gap:8px}
+.navbar-brand span{font-size:1.3rem}
+.navbar-links{display:flex;gap:12px;margin-left:auto}
+.nav-btn{padding:6px 14px;border-radius:6px;font-size:13px;border:1px solid var(--border);background:var(--card2);color:var(--text);cursor:pointer;text-decoration:none;display:inline-flex;align-items:center;gap:6px;transition:all .15s}
+.nav-btn:hover{border-color:var(--green);color:var(--green);text-decoration:none}
+.nav-btn.primary{background:var(--green);border-color:var(--green);color:#000;font-weight:600}
+.nav-btn.primary:hover{background:var(--green2);color:#000}
+.container{max-width:1200px;margin:0 auto;padding:24px}
+.page-title{font-size:1.6rem;font-weight:700;margin-bottom:4px}
+.page-sub{color:var(--muted);margin-bottom:24px;font-size:13px}
+.card{background:var(--card);border:1px solid var(--border);border-radius:12px;padding:20px}
+.card-title{font-size:1rem;font-weight:600;margin-bottom:16px;color:var(--text)}
+.grid{display:grid;gap:16px}
+.grid-2{grid-template-columns:repeat(auto-fit,minmax(280px,1fr))}
+.grid-3{grid-template-columns:repeat(auto-fit,minmax(200px,1fr))}
+.grid-4{grid-template-columns:repeat(auto-fit,minmax(160px,1fr))}
+.form-group{margin-bottom:16px}
+.form-label{display:block;font-size:13px;font-weight:500;margin-bottom:6px;color:var(--muted)}
+.form-control{width:100%;padding:8px 12px;background:var(--card2);border:1px solid var(--border);border-radius:8px;color:var(--text);font-size:14px;transition:border-color .15s;font-family:inherit}
+.form-control:focus{outline:none;border-color:var(--green)}
+textarea.form-control{resize:vertical;min-height:80px}
+select.form-control{cursor:pointer}
+.btn{padding:8px 16px;border-radius:8px;font-size:13px;font-weight:600;border:1px solid transparent;cursor:pointer;display:inline-flex;align-items:center;gap:6px;transition:all .15s;font-family:inherit}
+.btn-primary{background:var(--green);color:#000;border-color:var(--green)}
+.btn-primary:hover{background:var(--green2)}
+.btn-secondary{background:var(--card2);color:var(--text);border-color:var(--border)}
+.btn-secondary:hover{border-color:var(--green);color:var(--green)}
+.btn-danger{background:var(--red);color:#fff;border-color:var(--red)}
+.btn-danger:hover{opacity:.85}
+.btn-sm{padding:5px 10px;font-size:12px}
+.btn-lg{padding:12px 24px;font-size:15px}
+.badge{display:inline-block;padding:3px 8px;border-radius:20px;font-size:11px;font-weight:600}
+.badge-green{background:#1a3a2a;color:var(--green)}
+.badge-blue{background:#1a2a3a;color:var(--blue)}
+.badge-purple{background:#2a1a3a;color:var(--purple)}
+.badge-orange{background:#3a2a1a;color:var(--orange)}
+.badge-red{background:#3a1a1a;color:var(--red)}
+.badge-gray{background:var(--card2);color:var(--muted)}
+.stat-num{font-size:2rem;font-weight:700;color:var(--green)}
+.stat-label{font-size:12px;color:var(--muted);margin-top:2px}
+.alert{padding:12px 16px;border-radius:8px;margin-bottom:16px;font-size:13px;border:1px solid}
+.alert-success{background:#1a3a2a;border-color:var(--green);color:var(--green)}
+.alert-danger{background:#3a1a1a;border-color:var(--red);color:var(--red)}
+.alert-info{background:#1a2a3a;border-color:var(--blue);color:var(--blue)}
+.spinner{width:18px;height:18px;border:2px solid rgba(255,255,255,.2);border-top-color:var(--green);border-radius:50%;animation:spin .7s linear infinite;display:inline-block}
+@keyframes spin{to{transform:rotate(360deg)}}
+.divider{height:1px;background:var(--border);margin:20px 0}
+.text-muted{color:var(--muted)}
+.text-green{color:var(--green)}
+.text-right{text-align:right}
+.flex{display:flex;align-items:center}
+.flex-between{display:flex;align-items:center;justify-content:space-between}
+.gap-8{gap:8px}
+.gap-12{gap:12px}
+.mt-8{margin-top:8px}
+.mt-16{margin-top:16px}
+.mb-16{margin-bottom:16px}
+.w-full{width:100%}
+.modal-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.7);z-index:200;align-items:center;justify-content:center}
+.modal-overlay.show{display:flex}
+.modal{background:var(--card);border:1px solid var(--border);border-radius:12px;padding:24px;width:90%;max-width:560px;max-height:90vh;overflow-y:auto}
+.modal-title{font-size:1.1rem;font-weight:700;margin-bottom:16px}
+.close-btn{background:none;border:none;color:var(--muted);font-size:1.2rem;cursor:pointer;float:right}
+.close-btn:hover{color:var(--text)}
+</style>
+{% block extra_head %}{% endblock %}
+</head>
+<body>
+<nav class="navbar">
+  <a href="/" class="navbar-brand"><span>🤖</span> AI Social Engine</a>
+  <div class="navbar-links">
+    <a href="/" class="nav-btn">🏠 Home</a>
+    <a href="/business/new" class="nav-btn primary">+ New Business</a>
+  </div>
+</nav>
+
+<div class="container">
+  {% with messages = get_flashed_messages(with_categories=true) %}
+    {% for cat, msg in messages %}
+      <div class="alert alert-{{ cat }}">{{ msg }}</div>
+    {% endfor %}
+  {% endwith %}
+  {% block content %}{% endblock %}
+</div>
+
+<script>
+function showModal(id){document.getElementById(id).classList.add('show')}
+function hideModal(id){document.getElementById(id).classList.remove('show')}
+function copyText(text){
+  navigator.clipboard.writeText(text).then(()=>{
+    const el=event.target.closest('button');
+    const orig=el.textContent;
+    el.textContent='✅ Copied!';
+    setTimeout(()=>el.textContent=orig,1500);
+  });
+}
+</script>
+</body>
+</html>

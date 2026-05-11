@@ -1,0 +1,79 @@
+{% extends "base.html" %}
+{% block title %}{{ 'Edit' if biz else 'New' }} Business{% endblock %}
+{% block content %}
+
+<div style="max-width:640px;margin:0 auto">
+  <div class="page-title">{{ '✏️ Edit Business' if biz else '🏢 Add New Business' }}</div>
+  <div class="page-sub">{{ 'Update your business profile' if biz else 'Fill in your business details to generate content' }}</div>
+
+  <form method="POST">
+    <div class="card">
+      <div class="card-title">Business Information</div>
+      <div class="grid grid-2">
+        <div class="form-group">
+          <label class="form-label">Business Name *</label>
+          <input class="form-control" name="name" required placeholder="e.g. Sharma Electronics"
+                 value="{{ biz.name if biz else '' }}">
+        </div>
+        <div class="form-group">
+          <label class="form-label">Category *</label>
+          <select class="form-control" name="category" required>
+            {% for cat in categories %}
+            <option value="{{ cat }}" {{ 'selected' if biz and biz.category == cat else '' }}>{{ cat }}</option>
+            {% endfor %}
+          </select>
+        </div>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Location / Area *</label>
+        <input class="form-control" name="location" required placeholder="e.g. Lajpat Nagar, New Delhi"
+               value="{{ biz.location if biz else '' }}">
+      </div>
+      <div class="form-group">
+        <label class="form-label">Business Description *</label>
+        <textarea class="form-control" name="description" required rows="3"
+                  placeholder="What do you sell? What makes you special? e.g. We sell fresh, homemade mithai in Meerut. Known for our kaju katli and special dry fruit laddoos.">{{ biz.description if biz else '' }}</textarea>
+      </div>
+      <div class="form-group">
+        <label class="form-label">USP (Unique Selling Point)</label>
+        <input class="form-control" name="usp" placeholder="e.g. Only shop in Delhi with 100+ mithai varieties. Home delivery in 2 hours."
+               value="{{ biz.usp if biz else '' }}">
+      </div>
+      <div class="form-group">
+        <label class="form-label">Target Audience</label>
+        <input class="form-control" name="target_audience" placeholder="e.g. Working professionals aged 25-45, families in Meerut"
+               value="{{ biz.target_audience if biz else '' }}">
+      </div>
+    </div>
+
+    <div class="card mt-16">
+      <div class="card-title">Content Style</div>
+      <div class="grid grid-2">
+        <div class="form-group">
+          <label class="form-label">Language</label>
+          <select class="form-control" name="language">
+            <option value="hinglish" {{ 'selected' if not biz or biz.language == 'hinglish' else '' }}>🇮🇳 Hinglish (Recommended)</option>
+            <option value="english"  {{ 'selected' if biz and biz.language == 'english' else '' }}>🇬🇧 English</option>
+            <option value="hindi"    {{ 'selected' if biz and biz.language == 'hindi' else '' }}>हिंदी Hindi (Roman)</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Brand Tone</label>
+          <select class="form-control" name="tone">
+            <option value="friendly"     {{ 'selected' if not biz or biz.tone == 'friendly' else '' }}>😊 Friendly & Warm</option>
+            <option value="professional" {{ 'selected' if biz and biz.tone == 'professional' else '' }}>💼 Professional</option>
+            <option value="fun"          {{ 'selected' if biz and biz.tone == 'fun' else '' }}>🎉 Fun & Playful</option>
+            <option value="luxury"       {{ 'selected' if biz and biz.tone == 'luxury' else '' }}>✨ Luxury & Premium</option>
+            <option value="urgent"       {{ 'selected' if biz and biz.tone == 'urgent' else '' }}>🔥 Urgent / FOMO</option>
+          </select>
+        </div>
+      </div>
+    </div>
+
+    <div class="flex gap-8 mt-16">
+      <button type="submit" class="btn btn-primary btn-lg">{{ '💾 Save Changes' if biz else '🚀 Create Business' }}</button>
+      <a href="{{ '/business/' + biz.id|string if biz else '/' }}" class="btn btn-secondary btn-lg">Cancel</a>
+    </div>
+  </form>
+</div>
+{% endblock %}

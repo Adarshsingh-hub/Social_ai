@@ -1,0 +1,48 @@
+{% extends "base.html" %}
+{% block title %}AI Social Media Engine — Home{% endblock %}
+{% block content %}
+
+{% if not businesses %}
+<div style="text-align:center;padding:80px 20px">
+  <div style="font-size:4rem;margin-bottom:16px">🚀</div>
+  <h1 style="font-size:2rem;margin-bottom:8px">AI Social Media Engine</h1>
+  <p class="text-muted" style="font-size:1rem;margin-bottom:32px">
+    Generate a full month of Instagram, WhatsApp &amp; Facebook posts in 30 seconds.<br>
+    Built for Indian businesses — in Hinglish, Hindi or English.
+  </p>
+  <a href="/business/new" class="btn btn-primary btn-lg">➕ Add Your First Business</a>
+</div>
+
+{% else %}
+
+<div class="flex-between mb-16">
+  <div>
+    <div class="page-title">Your Businesses</div>
+    <div class="page-sub">{{ businesses|length }} business{{ 'es' if businesses|length != 1 else '' }} — click to manage content</div>
+  </div>
+  <a href="/business/new" class="btn btn-primary">+ Add Business</a>
+</div>
+
+<div class="grid grid-2">
+{% for biz in businesses %}
+<a href="/business/{{ biz.id }}" style="text-decoration:none">
+<div class="card" style="cursor:pointer;transition:border-color .2s" onmouseover="this.style.borderColor='#25d366'" onmouseout="this.style.borderColor='#30363d'">
+  <div class="flex-between mb-16">
+    <div>
+      <div style="font-size:1.1rem;font-weight:700;color:var(--text)">{{ biz.name }}</div>
+      <div class="text-muted" style="font-size:12px;margin-top:2px">{{ biz.category }} · {{ biz.location }}</div>
+    </div>
+    <span class="badge badge-green">Active</span>
+  </div>
+  <div class="text-muted" style="font-size:13px;margin-bottom:12px">{{ biz.description[:100] }}{% if biz.description|length > 100 %}…{% endif %}</div>
+  <div class="flex gap-8">
+    <span class="badge badge-blue">{{ biz.posts.count() }} posts</span>
+    <span class="badge badge-{{ 'purple' if biz.language == 'hinglish' else 'orange' }}">{{ biz.language }}</span>
+    <span class="badge badge-gray">{{ biz.tone }}</span>
+  </div>
+</div>
+</a>
+{% endfor %}
+</div>
+{% endif %}
+{% endblock %}

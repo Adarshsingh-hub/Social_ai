@@ -1,0 +1,100 @@
+{% extends "base.html" %}
+{% block title %}{{ biz.name }} — Content Strategy{% endblock %}
+{% block content %}
+
+<div class="flex-between mb-16">
+  <div>
+    <div class="page-title">📊 Content Strategy</div>
+    <div class="page-sub">AI-generated strategy for {{ biz.name }}</div>
+  </div>
+  <a href="/business/{{ biz.id }}" class="btn btn-secondary">← Back to Dashboard</a>
+</div>
+
+{% if strategy %}
+<div class="grid grid-2">
+
+  <div class="card">
+    <div class="card-title">📅 Posting Schedule</div>
+    <div class="grid grid-2" style="gap:12px">
+      <div>
+        <div class="text-muted" style="font-size:11px;margin-bottom:4px">FREQUENCY</div>
+        <div style="font-size:1.3rem;font-weight:700;color:var(--green)">{{ strategy.posting_frequency }} <span style="font-size:13px;color:var(--muted)">posts/week</span></div>
+      </div>
+      <div>
+        <div class="text-muted" style="font-size:11px;margin-bottom:4px">BEST DAYS</div>
+        <div style="font-size:13px">{{ strategy.best_days|join(', ') if strategy.best_days else '—' }}</div>
+      </div>
+    </div>
+    <div class="mt-16">
+      <div class="text-muted" style="font-size:11px;margin-bottom:8px">BEST TIMES TO POST</div>
+      <div class="flex gap-8" style="flex-wrap:wrap">
+        {% for t in strategy.best_times or [] %}
+        <span class="badge badge-blue">{{ t }}</span>
+        {% endfor %}
+      </div>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-title">🏷️ Hashtag Strategy</div>
+    {% if strategy.hashtag_strategy %}
+    {% for group, tags in strategy.hashtag_strategy.items() %}
+    <div style="margin-bottom:12px">
+      <div class="text-muted" style="font-size:11px;margin-bottom:4px">{{ group.upper() }}</div>
+      <div class="flex gap-6" style="flex-wrap:wrap">
+        {% for tag in tags %}<span class="badge badge-gray">{{ tag }}</span>{% endfor %}
+      </div>
+    </div>
+    {% endfor %}
+    {% endif %}
+  </div>
+
+</div>
+
+<div class="card mt-16">
+  <div class="card-title">🎯 5 Content Pillars</div>
+  <div class="grid grid-2">
+    {% for pillar in strategy.content_pillars or [] %}
+    <div style="padding:12px;background:var(--card2);border-radius:8px;border:1px solid var(--border)">
+      {% if pillar is mapping %}
+      <div style="font-weight:600;margin-bottom:4px;color:var(--green)">{{ pillar.get('theme') or pillar.get('name') or pillar.get('title','') }}</div>
+      <div class="text-muted" style="font-size:12px">{{ pillar.get('description','') }}</div>
+      {% else %}
+      <div style="font-size:13px">{{ pillar }}</div>
+      {% endif %}
+    </div>
+    {% endfor %}
+  </div>
+</div>
+
+<div class="grid grid-2 mt-16">
+  <div class="card">
+    <div class="card-title">💡 Growth Tips</div>
+    {% for tip in strategy.growth_tips or [] %}
+    <div style="display:flex;gap:8px;margin-bottom:10px;font-size:13px">
+      <span style="color:var(--green);flex-shrink:0">✓</span>
+      <span>{{ tip }}</span>
+    </div>
+    {% endfor %}
+  </div>
+
+  <div class="card">
+    <div class="card-title">🔥 Untapped Angles</div>
+    <div class="text-muted" style="font-size:12px;margin-bottom:12px">What your competitors are NOT doing</div>
+    {% for angle in strategy.competitor_angles or [] %}
+    <div style="display:flex;gap:8px;margin-bottom:10px;font-size:13px">
+      <span style="color:var(--orange);flex-shrink:0">→</span>
+      <span>{{ angle }}</span>
+    </div>
+    {% endfor %}
+  </div>
+</div>
+
+{% else %}
+<div class="card" style="text-align:center;padding:40px">
+  <div style="font-size:2rem;margin-bottom:12px">⚠️</div>
+  <div>Strategy generation failed. Check your OpenAI API key and try again.</div>
+  <a href="/business/{{ biz.id }}" class="btn btn-secondary mt-16">← Go Back</a>
+</div>
+{% endif %}
+{% endblock %}
