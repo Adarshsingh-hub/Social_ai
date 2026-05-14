@@ -7,13 +7,13 @@ from flask import Flask
 from app.models import db
 
 
-def create_app() -> Flask:
+def create_app():
     app = Flask(__name__, template_folder="templates", static_folder="static")
 
-    app.config["SECRET_KEY"]                  = os.environ["FLASK_SECRET_KEY"]
-    app.config["SQLALCHEMY_DATABASE_URI"]     = os.getenv("DATABASE_URL", "sqlite:///social_ai.db")
+    app.config["SECRET_KEY"]                     = os.environ["FLASK_SECRET_KEY"]
+    app.config["SQLALCHEMY_DATABASE_URI"]        = os.getenv("DATABASE_URL", "sqlite:///social_ai.db")
     app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
-    app.config["SQLALCHEMY_ENGINE_OPTIONS"]   = {"pool_pre_ping": True}
+    app.config["SQLALCHEMY_ENGINE_OPTIONS"]      = {"pool_pre_ping": True}
 
     db.init_app(app)
 
@@ -22,6 +22,10 @@ def create_app() -> Flask:
 
     with app.app_context():
         db.create_all()
+
+    # Start background scheduler for auto-publishing
+    from app.scheduler import start_scheduler
+    start_scheduler(app)
 
     logging.basicConfig(
         level=logging.DEBUG if os.getenv("FLASK_ENV") == "development" else logging.INFO,

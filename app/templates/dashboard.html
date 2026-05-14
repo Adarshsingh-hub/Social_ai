@@ -1,17 +1,22 @@
 {% extends "base.html" %}
 {% block title %}{{ biz.name }} — Dashboard{% endblock %}
+
 {% block extra_head %}
 <style>
-.post-card{background:var(--card);border:1px solid var(--border);border-radius:10px;padding:16px;transition:border-color .2s}
+.post-card{background:var(--card);border:1px solid var(--border);border-radius:12px;overflow:hidden;transition:border-color .2s;display:flex;flex-direction:column}
 .post-card:hover{border-color:#444}
-.post-card.used{opacity:.45}
-.post-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:10px}
-.post-day{font-size:11px;color:var(--muted);font-weight:600}
-.post-caption{font-size:13px;line-height:1.6;color:var(--text);margin-bottom:10px;white-space:pre-wrap;word-break:break-word}
-.post-hashtags{font-size:11px;color:var(--blue);margin-bottom:10px;word-break:break-all}
-.post-image{font-size:11px;color:var(--muted);font-style:italic;margin-bottom:10px;padding:8px;background:var(--card2);border-radius:6px}
-.post-actions{display:flex;gap:6px;flex-wrap:wrap}
-.type-badge{padding:3px 8px;border-radius:20px;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.5px}
+.post-card.used{opacity:.4}
+.post-img-wrap{width:100%;aspect-ratio:1/1;background:var(--card2);position:relative;overflow:hidden;flex-shrink:0}
+.post-img-wrap img{width:100%;height:100%;object-fit:cover;display:block}
+.post-img-placeholder{width:100%;height:100%;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px;color:var(--muted);font-size:12px}
+.img-overlay{position:absolute;inset:0;background:rgba(0,0,0,.55);display:flex;align-items:center;justify-content:center;gap:8px;opacity:0;transition:opacity .2s;flex-wrap:wrap;padding:8px}
+.post-img-wrap:hover .img-overlay{opacity:1}
+.post-body{padding:14px;flex:1;display:flex;flex-direction:column;gap:8px}
+.post-header{display:flex;align-items:center;justify-content:space-between}
+.post-caption{font-size:12px;line-height:1.55;color:var(--text);flex:1;overflow:hidden;display:-webkit-box;-webkit-line-clamp:4;-webkit-box-orient:vertical}
+.post-hashtags{font-size:11px;color:var(--blue);word-break:break-all;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+.post-actions{display:flex;gap:5px;flex-wrap:wrap;margin-top:auto;padding-top:8px;border-top:1px solid var(--border)}
+.type-badge{padding:2px 7px;border-radius:20px;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.4px;white-space:nowrap}
 .type-promo{background:#3a2a1a;color:#f78166}
 .type-tip{background:#1a2a3a;color:#58a6ff}
 .type-testimonial{background:#2a1a3a;color:#bc8cff}
@@ -22,38 +27,42 @@
 .type-product_spotlight{background:#2a2a1a;color:#daa520}
 .type-customer_love{background:#1a2a1a;color:#98fb98}
 .type-motivational{background:#2a1a1a;color:#ff6347}
+.status-dot{width:7px;height:7px;border-radius:50%;display:inline-block;flex-shrink:0}
+.dot-draft{background:var(--muted)}
+.dot-scheduled{background:#ffd700}
+.dot-published{background:var(--green)}
+.dot-failed{background:var(--red)}
 .toolbar{background:var(--card);border:1px solid var(--border);border-radius:12px;padding:16px;margin-bottom:20px}
-.filter-btn{padding:5px 12px;border-radius:20px;font-size:12px;font-weight:600;border:1px solid var(--border);background:transparent;color:var(--muted);cursor:pointer;transition:all .15s}
+.filter-btn{padding:4px 10px;border-radius:20px;font-size:11px;font-weight:600;border:1px solid var(--border);background:transparent;color:var(--muted);cursor:pointer;transition:all .15s;white-space:nowrap}
 .filter-btn.active,.filter-btn:hover{border-color:var(--green);color:var(--green);background:#1a3a2a}
-.loading-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.85);z-index:300;align-items:center;justify-content:center;flex-direction:column;gap:16px}
+.loading-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.88);z-index:400;align-items:center;justify-content:center;flex-direction:column;gap:16px}
 .loading-overlay.show{display:flex}
-.loading-text{color:var(--text);font-size:1.1rem;font-weight:600}
-.loading-sub{color:var(--muted);font-size:13px}
-.result-box{background:var(--card2);border:1px solid var(--border);border-radius:8px;padding:12px;margin-top:12px}
-.mb-8{margin-bottom:8px}
+.posts-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:16px}
+.img-gen-spinner{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;background:rgba(0,0,0,.6)}
+.result-box{background:var(--card2);border:1px solid var(--border);border-radius:8px;padding:12px;margin-top:10px}
+.ig-banner{background:#1a2a3a;border:1px solid var(--blue);border-radius:8px;padding:12px 16px;margin-bottom:16px;font-size:13px;color:var(--blue)}
 </style>
 {% endblock %}
 
 {% block content %}
 
-<!-- Loading overlay -->
 <div class="loading-overlay" id="loadingOverlay">
   <div class="spinner" style="width:40px;height:40px;border-width:4px"></div>
-  <div class="loading-text">AI is generating your content...</div>
-  <div class="loading-sub">Creating posts — this takes 30-40 seconds, please wait</div>
+  <div style="color:var(--text);font-size:1.1rem;font-weight:600" id="loadingText">Generating content...</div>
+  <div style="color:var(--muted);font-size:13px">Please wait — this takes 30-60 seconds</div>
 </div>
 
 <!-- Header -->
 <div class="flex-between mb-16">
   <div>
     <div class="page-title">{{ biz.name }}</div>
-    <div class="page-sub">
-      {{ biz.category }} &middot; {{ biz.location }} &middot;
-      <span class="badge {% if biz.language == 'hinglish' %}badge-purple{% else %}badge-blue{% endif %}">{{ biz.language }}</span>
+    <div class="page-sub">{{ biz.category }} &middot; {{ biz.location }}
+      &middot; <span class="badge badge-purple">{{ biz.language }}</span>
+      &middot; <span class="badge badge-gray">{{ biz.tone }}</span>
     </div>
   </div>
-  <div class="flex gap-8">
-    <a href="/business/{{ biz.id }}/edit" class="btn btn-secondary btn-sm">Edit</a>
+  <div class="flex gap-8" style="flex-wrap:wrap">
+    <a href="/business/{{ biz.id }}/edit"     class="btn btn-secondary btn-sm">Edit</a>
     <a href="/business/{{ biz.id }}/strategy" class="btn btn-secondary btn-sm">Strategy</a>
     {% if posts %}
     <a href="/business/{{ biz.id }}/export/csv" class="btn btn-secondary btn-sm">CSV</a>
@@ -62,47 +71,56 @@
   </div>
 </div>
 
+{% if not ig_configured %}
+<div class="ig-banner">
+  Instagram auto-posting is not configured. Add <strong>INSTAGRAM_ACCESS_TOKEN</strong> and
+  <strong>INSTAGRAM_ACCOUNT_ID</strong> to your <code>.env</code> file to enable it.
+  <a href="/ig-status" target="_blank" style="color:var(--blue);margin-left:8px">Check status</a>
+</div>
+{% endif %}
+
 <!-- Stats -->
-<div class="grid grid-4 mb-16">
+<div class="grid grid-4 mb-16" style="grid-template-columns:repeat(auto-fit,minmax(130px,1fr))">
   <div class="card" style="text-align:center">
     <div class="stat-num">{{ stats.total }}</div>
     <div class="stat-label">Total Posts</div>
   </div>
   <div class="card" style="text-align:center">
-    <div class="stat-num" style="color:var(--blue)">{{ stats.remaining }}</div>
-    <div class="stat-label">Ready to Post</div>
+    <div class="stat-num" style="color:#58a6ff">{{ stats.with_image }}</div>
+    <div class="stat-label">With Image</div>
   </div>
   <div class="card" style="text-align:center">
-    <div class="stat-num" style="color:var(--muted)">{{ stats.used }}</div>
-    <div class="stat-label">Posted</div>
+    <div class="stat-num" style="color:#ffd700">{{ stats.scheduled }}</div>
+    <div class="stat-label">Scheduled</div>
   </div>
   <div class="card" style="text-align:center">
-    <div class="stat-num" style="color:var(--purple)">
-      {% if stats.total > 0 %}{{ ((stats.used / stats.total) * 100) | int }}{% else %}0{% endif %}%
-    </div>
-    <div class="stat-label">Completion</div>
+    <div class="stat-num" style="color:var(--green)">{{ stats.published }}</div>
+    <div class="stat-label">Published</div>
   </div>
 </div>
 
-<!-- Generate Form -->
+<!-- Generate toolbar -->
 <div class="toolbar mb-16">
-  <div class="flex-between">
-    <div class="card-title" style="margin-bottom:0">Generate Content</div>
-    <button class="btn btn-secondary btn-sm" onclick="showModal('singleModal')">Single Post</button>
+  <div class="flex-between mb-12">
+    <div style="font-weight:600;font-size:14px">Generate Content</div>
+    <div class="flex gap-8">
+      <button class="btn btn-secondary btn-sm" onclick="showModal('singleModal')">Single Post</button>
+      <button class="btn btn-secondary btn-sm" onclick="showModal('festivalModal')">Festival</button>
+      <button class="btn btn-secondary btn-sm" onclick="showModal('variantsModal')">A/B Variants</button>
+    </div>
   </div>
-  <div class="divider"></div>
-  <form method="POST" action="/business/{{ biz.id }}/generate" id="generateForm"
-        onsubmit="document.getElementById('loadingOverlay').classList.add('show')">
-    <div class="grid grid-3" style="gap:12px;align-items:end">
-      <div class="form-group" style="margin-bottom:0">
-        <label class="form-label">Number of Posts</label>
+  <form method="POST" action="/business/{{ biz.id }}/generate"
+        onsubmit="showLoader('Generating captions... (30-60 sec)')">
+    <div style="display:flex;gap:12px;align-items:flex-end;flex-wrap:wrap">
+      <div class="form-group" style="margin:0;flex:1;min-width:130px">
+        <label class="form-label">Posts</label>
         <select class="form-control" name="num_posts">
-          <option value="7">7 posts (1 week)</option>
-          <option value="15">15 posts (2 weeks)</option>
-          <option value="30" selected>30 posts (1 month)</option>
+          <option value="7">7 (1 week)</option>
+          <option value="15">15 (2 weeks)</option>
+          <option value="30" selected>30 (1 month)</option>
         </select>
       </div>
-      <div class="form-group" style="margin-bottom:0">
+      <div class="form-group" style="margin:0;flex:1;min-width:130px">
         <label class="form-label">Platform</label>
         <select class="form-control" name="platform">
           <option value="instagram">Instagram</option>
@@ -111,74 +129,177 @@
           <option value="linkedin">LinkedIn</option>
         </select>
       </div>
-      <div class="flex gap-8" style="align-items:center;flex-wrap:wrap">
-        <label style="display:flex;align-items:center;gap:6px;font-size:13px;color:var(--muted);cursor:pointer;white-space:nowrap">
-          <input type="checkbox" name="replace_existing" style="accent-color:var(--green)">
-          Replace existing
-        </label>
-        <button type="submit" class="btn btn-primary">Generate</button>
-      </div>
+      <label style="display:flex;align-items:center;gap:6px;font-size:12px;color:var(--muted);cursor:pointer;white-space:nowrap">
+        <input type="checkbox" name="replace_existing" style="accent-color:var(--green)"> Replace existing
+      </label>
+      <button type="submit" class="btn btn-primary">Generate Captions</button>
     </div>
   </form>
+
+  {% if posts %}
+  <div class="divider" style="margin:14px 0"></div>
+  <div class="flex-between" style="flex-wrap:wrap;gap:8px">
+    <div style="font-size:12px;color:var(--muted)">
+      {{ stats.with_image }} / {{ stats.total }} posts have images
+    </div>
+    <button class="btn btn-secondary btn-sm"
+            onclick="generateAllImages(this)"
+            title="Generates DALL-E images for up to 10 posts at once. ~$0.04 per image.">
+      Generate Images (batch 10)
+    </button>
+  </div>
+  {% endif %}
 </div>
 
-<!-- Quick Actions + Filters -->
-<div class="flex gap-8 mb-16" style="flex-wrap:wrap;align-items:center">
-  <button class="btn btn-secondary btn-sm" onclick="showModal('festivalModal')">Festival Post</button>
-  <button class="btn btn-secondary btn-sm" onclick="showModal('variantsModal')">A/B Variants</button>
+<!-- Filters -->
+{% if posts %}
+<div class="flex gap-8 mb-16" style="flex-wrap:wrap">
+  <button class="filter-btn active" onclick="filterPosts('all',this)">All ({{ stats.total }})</button>
+  <button class="filter-btn" onclick="filterPosts('__no_image',this)">No Image</button>
+  <button class="filter-btn" onclick="filterPosts('__has_image',this)">Has Image</button>
+  <button class="filter-btn" onclick="filterPosts('__scheduled',this)">Scheduled</button>
+  <button class="filter-btn" onclick="filterPosts('__published',this)">Published</button>
   <span style="color:var(--border)">|</span>
-  <button class="filter-btn active" onclick="filterPosts('all',this)">All</button>
   {% for pt in post_types %}
   <button class="filter-btn" onclick="filterPosts('{{ pt }}',this)">{{ pt.replace('_',' ').title() }}</button>
   {% endfor %}
 </div>
+{% endif %}
 
 <!-- Posts Grid -->
 {% if posts %}
-<div class="grid grid-2" id="postsGrid">
-  {% for post in posts %}
-  <div class="post-card {% if post.is_used %}used{% endif %}" data-type="{{ post.post_type }}" id="post-{{ post.id }}">
+<div class="posts-grid" id="postsGrid">
+{% for post in posts %}
+<div class="post-card {% if post.is_used %}used{% endif %}"
+     data-type="{{ post.post_type }}"
+     data-img="{{ 'yes' if post.image_status == 'ready' else 'no' }}"
+     data-pstatus="{{ post.publish_status }}"
+     id="post-{{ post.id }}">
+
+  <!-- Image area -->
+  <div class="post-img-wrap" id="imgwrap-{{ post.id }}">
+    {% if post.image_status == 'ready' and post.image_local %}
+      <img src="/images/{{ post.image_local }}" alt="Post image" id="img-{{ post.id }}">
+      <div class="img-overlay">
+        <a href="/images/{{ post.image_local }}" target="_blank"
+           class="btn btn-secondary btn-sm">View Full</a>
+        <button class="btn btn-secondary btn-sm"
+                ,onclick="genImage({{ post.id }}, this)">Regenerate</button>
+      </div>
+    {% elif post.image_status == 'generating' %}
+      <div class="post-img-placeholder">
+        <div class="spinner"></div>
+        <span>Generating...</span>
+      </div>
+    {% elif post.image_status == 'failed' %}
+      <div class="post-img-placeholder">
+        <span style="color:var(--red)">Failed</span>
+        <button class="btn btn-secondary btn-sm" ,onclick="genImage({{ post.id }}, this)">Retry</button>
+      </div>
+    {% else %}
+      <div class="post-img-placeholder" id="placeholder-{{ post.id }}">
+        <span style="font-size:2rem">🖼</span>
+        <span>No image yet</span>
+        <button class="btn btn-primary btn-sm" ,onclick="genImage({{ post.id }}, this)">Generate Image</button>
+      </div>
+    {% endif %}
+
+    <!-- publish status badge -->
+    <div style="position:absolute;top:8px;right:8px">
+      {% if post.publish_status == 'published' %}
+        <span class="badge badge-green" style="font-size:10px">Published</span>
+      {% elif post.publish_status == 'scheduled' %}
+        <span class="badge" style="background:#3a3a1a;color:#ffd700;font-size:10px">Scheduled</span>
+      {% elif post.publish_status == 'failed' %}
+        <span class="badge badge-red" style="font-size:10px">Failed</span>
+      {% endif %}
+    </div>
+  </div>
+
+  <!-- Body -->
+  <div class="post-body">
     <div class="post-header">
-      <div class="flex gap-8">
-        <span class="post-day">Day {{ post.day_number }}</span>
+      <div class="flex gap-6" style="align-items:center">
+        <span style="font-size:10px;color:var(--muted);font-weight:600">Day {{ post.day_number }}</span>
         <span class="type-badge type-{{ post.post_type }}">{{ post.post_type.replace('_',' ') }}</span>
       </div>
-      <span class="text-muted" style="font-size:11px">{{ post.best_time }}</span>
+      <span style="font-size:10px;color:var(--muted)">{{ post.best_time }}</span>
     </div>
 
     <div class="post-caption" id="cap-{{ post.id }}">{{ post.caption | e }}</div>
-
-    {% if post.hashtags %}
     <div class="post-hashtags" id="tags-{{ post.id }}">{{ post.hashtags | e }}</div>
-    {% else %}
-    <div class="post-hashtags" id="tags-{{ post.id }}" style="display:none"></div>
-    {% endif %}
 
     {% if post.image_prompt %}
-    <div class="post-image">Image idea: {{ post.image_prompt | e }}</div>
+    <div style="font-size:10px;color:var(--muted);font-style:italic;
+                white-space:nowrap;overflow:hidden;text-overflow:ellipsis"
+         title="{{ post.image_prompt | e }}">
+      Image: {{ post.image_prompt[:60] | e }}{% if post.image_prompt|length > 60 %}...{% endif %}
+    </div>
     {% endif %}
 
+    <!-- Actions -->
     <div class="post-actions">
-      <button class="btn btn-secondary btn-sm" onclick="copyPost({{ post.id }})">Copy</button>
-      <button class="btn btn-secondary btn-sm" id="used-btn-{{ post.id }}" onclick="toggleUsed({{ post.id }})">
-        {% if post.is_used %}Unmark{% else %}Mark Used{% endif %}
+      <button class="btn btn-secondary btn-sm" ,onclick="copyPost({{ post.id }})">Copy</button>
+      <button class="btn btn-secondary btn-sm" ,onclick="openEdit({{ post.id }})">Edit</button>
+      {% if post.image_status == 'ready' %}
+        {% if post.publish_status not in ['published'] %}
+          {% if ig_configured %}
+          <button class="btn btn-secondary btn-sm" ,onclick="openSchedule({{ post.id }})">Schedule</button>
+          <button class="btn btn-primary btn-sm" ,onclick="publishNow({{ post.id }}, this)">Post Now</button>
+          {% endif %}
+        {% endif %}
+      {% endif %}
+      <button class="btn btn-secondary btn-sm" id="used-btn-{{ post.id }}"
+              ,onclick="toggleUsed({{ post.id }})">
+        {{ 'Unmark' if post.is_used else 'Mark Used' }}
       </button>
-      <button class="btn btn-secondary btn-sm" onclick="openEdit({{ post.id }})">Edit</button>
-      <button class="btn btn-danger btn-sm" onclick="deletePost({{ post.id }})">Del</button>
+      <button class="btn btn-danger btn-sm" ,onclick="deletePost({{ post.id }})">Del</button>
     </div>
+
+    {% if post.publish_status == 'scheduled' and post.scheduled_at %}
+    <div style="font-size:10px;color:#ffd700;margin-top:4px">
+      Scheduled: {{ post.scheduled_at.strftime('%d %b %Y %H:%M') }} UTC
+      <button style="border:none;background:none;color:var(--red);cursor:pointer;font-size:10px;padding:0 4px"
+              ,onclick="cancelSchedule({{ post.id }})">Cancel</button>
+    </div>
+    {% endif %}
+    {% if post.publish_status == 'published' and post.ig_media_id %}
+    <div style="font-size:10px;color:var(--green);margin-top:4px">
+      Posted on Instagram
+    </div>
+    {% endif %}
   </div>
-  {% endfor %}
 </div>
+{% endfor %}
+</div>
+
 {% else %}
 <div class="card" style="text-align:center;padding:60px 20px">
   <div style="font-size:3rem;margin-bottom:12px">📭</div>
   <div style="font-size:1rem;font-weight:600;margin-bottom:8px">No content yet</div>
-  <div class="text-muted">Click Generate above to create your first month of posts</div>
+  <div class="text-muted">Click Generate Captions above to get started</div>
 </div>
 {% endif %}
 
 
-<!-- ── MODALS ────────────────────────────────────────────────── -->
+<!-- ══ MODALS ══════════════════════════════════════════════════ -->
+
+<!-- Schedule Modal -->
+<div class="modal-overlay" id="scheduleModal">
+  <div class="modal">
+    <button class="close-btn" onclick="hideModal('scheduleModal')">x</button>
+    <div class="modal-title">Schedule Post</div>
+    <input type="hidden" id="schedulePostId">
+    <div class="form-group">
+      <label class="form-label">Date & Time (your local time — will be saved as UTC)</label>
+      <input class="form-control" type="datetime-local" id="scheduleDateTime">
+    </div>
+    <div style="font-size:12px;color:var(--muted);margin-bottom:12px">
+      The bot checks every minute and posts automatically at the scheduled time.
+    </div>
+    <button class="btn btn-primary w-full" onclick="confirmSchedule()">Confirm Schedule</button>
+  </div>
+</div>
 
 <!-- Single Post Modal -->
 <div class="modal-overlay" id="singleModal">
@@ -199,24 +320,25 @@
         <option value="instagram">Instagram</option>
         <option value="whatsapp">WhatsApp</option>
         <option value="facebook">Facebook</option>
-        <option value="linkedin">LinkedIn</option>
       </select>
     </div>
     <div class="form-group">
       <label class="form-label">Extra context (optional)</label>
       <textarea class="form-control" id="singleContext" rows="2"
-        placeholder="e.g. Mention our weekend 20% sale"></textarea>
+                placeholder="e.g. Announce weekend 20% sale"></textarea>
     </div>
-    <button class="btn btn-primary w-full" id="singleBtn" onclick="generateSingle(this)">Generate Post</button>
+    <button class="btn btn-primary w-full" id="singleBtn" onclick="generateSingle(this)">Generate</button>
     <div id="singleResult" style="display:none;margin-top:12px">
       <div class="divider"></div>
       <div class="result-box">
-        <div class="post-caption" id="singleCaption"></div>
-        <div class="post-hashtags" id="singleHashtags"></div>
-        <div class="post-image" id="singleImage" style="margin-bottom:0"></div>
+        <div style="font-size:12px;line-height:1.5" id="singleCaption"></div>
+        <div style="font-size:11px;color:var(--blue);margin-top:6px" id="singleHashtags"></div>
       </div>
-      <button class="btn btn-secondary btn-sm mt-8" onclick="copySingle()">Copy Post</button>
-      <button class="btn btn-secondary btn-sm mt-8" onclick="hideModal('singleModal');location.reload()">Done</button>
+      <div class="flex gap-8 mt-8">
+        <button class="btn btn-secondary btn-sm" onclick="copySingle()">Copy</button>
+        <button class="btn btn-secondary btn-sm"
+                onclick="hideModal('singleModal');location.reload()">Done</button>
+      </div>
     </div>
   </div>
 </div>
@@ -225,25 +347,25 @@
 <div class="modal-overlay" id="festivalModal">
   <div class="modal">
     <button class="close-btn" onclick="hideModal('festivalModal')">x</button>
-    <div class="modal-title">Festival Post Generator</div>
+    <div class="modal-title">Festival Post</div>
     <div class="form-group">
-      <label class="form-label">Select Festival</label>
+      <label class="form-label">Festival</label>
       <select class="form-control" id="festivalSelect">
-        {% for f in festivals %}
-        <option value="{{ f }}">{{ f }}</option>
-        {% endfor %}
+        {% for f in festivals %}<option>{{ f }}</option>{% endfor %}
       </select>
     </div>
-    <button class="btn btn-primary w-full" id="festivalBtn" onclick="generateFestival(this)">Generate Festival Post</button>
+    <button class="btn btn-primary w-full" id="festivalBtn" onclick="generateFestival(this)">Generate</button>
     <div id="festivalResult" style="display:none;margin-top:12px">
       <div class="divider"></div>
       <div class="result-box">
-        <div class="post-caption" id="festivalCaption"></div>
-        <div class="post-hashtags" id="festivalHashtags"></div>
-        <div class="post-image" id="festivalImage" style="margin-bottom:0"></div>
+        <div style="font-size:12px;line-height:1.5" id="festivalCaption"></div>
+        <div style="font-size:11px;color:var(--blue);margin-top:6px" id="festivalHashtags"></div>
       </div>
-      <button class="btn btn-secondary btn-sm mt-8" onclick="copyFestival()">Copy Post</button>
-      <button class="btn btn-secondary btn-sm mt-8" onclick="hideModal('festivalModal');location.reload()">Done</button>
+      <div class="flex gap-8 mt-8">
+        <button class="btn btn-secondary btn-sm" onclick="copyFestival()">Copy</button>
+        <button class="btn btn-secondary btn-sm"
+                onclick="hideModal('festivalModal');location.reload()">Done</button>
+      </div>
     </div>
   </div>
 </div>
@@ -254,9 +376,9 @@
     <button class="close-btn" onclick="hideModal('variantsModal')">x</button>
     <div class="modal-title">A/B Caption Variants</div>
     <div class="form-group">
-      <label class="form-label">Topic / Prompt</label>
+      <label class="form-label">Topic</label>
       <textarea class="form-control" id="variantTopic" rows="2"
-        placeholder="e.g. Announce new product launch with 10% early bird offer"></textarea>
+                placeholder="e.g. New product launch with 10% early bird offer"></textarea>
     </div>
     <button class="btn btn-primary w-full" id="variantBtn" onclick="generateVariants(this)">Generate 3 Variants</button>
     <div id="variantsResult" style="margin-top:12px"></div>
@@ -277,7 +399,7 @@
       <label class="form-label">Hashtags</label>
       <textarea class="form-control" id="editHashtags" rows="3"></textarea>
     </div>
-    <button class="btn btn-primary w-full" onclick="saveEdit()">Save Changes</button>
+    <button class="btn btn-primary w-full" onclick="saveEdit()">Save</button>
   </div>
 </div>
 
@@ -285,225 +407,265 @@
 
 {% block scripts %}
 <script>
-// @ts-nocheck
-const BIZ_ID = {{ biz.id }};
+const BIZ_ID = parseInt("{{ biz.id }}", 10);
+
+function showLoader(msg) {
+  document.getElementById('loadingText').textContent =
+    msg || 'Processing...';
+  document.getElementById('loadingOverlay').classList.add('show');
+}
+
+function hideLoader() {
+  document.getElementById('loadingOverlay').classList.remove('show');
+}
 
 /* ── Filter ── */
 function filterPosts(type, btn) {
-  document.querySelectorAll('.filter-btn').forEach(function(b) { b.classList.remove('active'); });
+  document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
   btn.classList.add('active');
-  document.querySelectorAll('.post-card').forEach(function(card) {
-    card.style.display = (type === 'all' || card.dataset.type === type) ? '' : 'none';
+  document.querySelectorAll('.post-card').forEach(card => {
+    let show = false;
+    if (type === 'all')          show = true;
+    else if (type === '__no_image')  show = card.dataset.img !== 'yes';
+    else if (type === '__has_image') show = card.dataset.img === 'yes';
+    else if (type === '__scheduled') show = card.dataset.pstatus === 'scheduled';
+    else if (type === '__published') show = card.dataset.pstatus === 'published';
+    else                         show = card.dataset.type === type;
+    card.style.display = show ? '' : 'none';
   });
 }
 
-/* ── Copy post by id ── */
+/* ── Copy post ── */
 function copyPost(id) {
-  var caption  = document.getElementById('cap-'  + id) ? document.getElementById('cap-'  + id).innerText : '';
-  var hashtags = document.getElementById('tags-' + id) ? document.getElementById('tags-' + id).innerText : '';
-  var text = caption + (hashtags ? '\n\n' + hashtags : '');
-  navigator.clipboard.writeText(text).then(function() {
-    var btn = document.querySelector('#post-' + id + ' button');
-    var orig = btn.textContent;
-    btn.textContent = 'Copied!';
-    setTimeout(function() { btn.textContent = orig; }, 1500);
+  const cap  = document.getElementById('cap-'  + id)?.innerText || '';
+  const tags = document.getElementById('tags-' + id)?.innerText || '';
+  navigator.clipboard.writeText(cap + (tags ? '\n\n' + tags : '')).then(() => {
+    const btns = document.querySelectorAll('#post-' + id + ' .post-actions button');
+    if (btns[0]) { const o=btns[0].textContent; btns[0].textContent='Copied!'; setTimeout(()=>btns[0].textContent=o,1500); }
   });
+}
+
+/* ── Generate image for one post ── */
+async function genImage(id, btn) {
+  const wrap = document.getElementById('imgwrap-' + id);
+  const ph   = document.getElementById('placeholder-' + id);
+
+  // Show spinner
+  if (ph) ph.innerHTML = '<div class="spinner"></div><span style="color:var(--muted);font-size:12px">Generating image...</span>';
+  if (btn) { btn.disabled = true; }
+
+  try {
+    const resp = await fetch('/post/' + id + '/generate-image', { method: 'POST' });
+    const data = await resp.json();
+    if (!resp.ok || !data.success) {
+      alert('Image generation failed: ' + (data.error || 'Unknown error'));
+      if (ph) ph.innerHTML = '<span style="color:var(--red);font-size:12px">Failed</span><button class="btn btn-secondary btn-sm" onclick="genImage('+id+',this)">Retry</button>';
+      return;
+    }
+    // Success — update card image
+    wrap.innerHTML =
+      '<img src="' + data.local_url + '" style="width:100%;height:100%;object-fit:cover">' +
+      '<div class="img-overlay">' +
+        '<a href="' + data.local_url + '" target="_blank" class="btn btn-secondary btn-sm">View Full</a>' +
+        '<button class="btn btn-secondary btn-sm" onclick="genImage('+id+',this)">Regenerate</button>' +
+      '</div>';
+    // Update card data attr
+    document.getElementById('post-' + id).dataset.img = 'yes';
+    // Reload to show publish buttons
+    location.reload();
+  } catch(e) {
+    alert('Error: ' + e.message);
+    if (btn) btn.disabled = false;
+  }
+}
+
+/* ── Batch generate images ── */
+async function generateAllImages(btn) {
+  if (!confirm('This will generate DALL-E 3 images for up to 10 posts (~$0.40). Continue?')) return;
+  btn.disabled = true;
+  btn.textContent = 'Generating...';
+  showLoader('Generating images for 10 posts... (1-2 minutes)');
+  try {
+    const resp = await fetch('/business/' + BIZ_ID + '/generate-all-images', { method: 'POST' });
+    const data = await resp.json();
+    hideLoader();
+    alert('Done! ' + (data.generated||0) + ' images generated, ' + (data.failed||0) + ' failed.');
+    location.reload();
+  } catch(e) {
+    hideLoader();
+    alert('Error: ' + e.message);
+  }
+  btn.disabled = false;
+  btn.textContent = 'Generate Images (batch 10)';
+}
+
+/* ── Publish Now ── */
+async function publishNow(id, btn) {
+  if (!confirm('Post this to Instagram right now?')) return;
+  btn.disabled = true;
+  btn.textContent = 'Posting...';
+  try {
+    const resp = await fetch('/post/' + id + '/publish-now', { method: 'POST' });
+    const data = await resp.json();
+    if (data.success) {
+      alert('Posted to Instagram!');
+      location.reload();
+    } else {
+      alert('Failed: ' + data.error);
+      btn.disabled = false;
+      btn.textContent = 'Post Now';
+    }
+  } catch(e) {
+    alert('Error: ' + e.message);
+    btn.disabled = false;
+    btn.textContent = 'Post Now';
+  }
+}
+
+/* ── Schedule ── */
+function openSchedule(id) {
+  document.getElementById('schedulePostId').value = id;
+  // default to tomorrow 7pm
+  const d = new Date(); d.setDate(d.getDate()+1); d.setHours(19,0,0,0);
+  document.getElementById('scheduleDateTime').value = d.toISOString().slice(0,16);
+  showModal('scheduleModal');
+}
+
+async function confirmSchedule() {
+  const id = document.getElementById('schedulePostId').value;
+  const dt = document.getElementById('scheduleDateTime').value;
+  if (!dt) { alert('Pick a date and time.'); return; }
+  const fd = new FormData();
+  fd.append('scheduled_at', dt);
+  const resp = await fetch('/post/' + id + '/schedule', { method: 'POST', body: fd });
+  const data = await resp.json();
+  if (data.success) {
+    alert(data.message);
+    hideModal('scheduleModal');
+    location.reload();
+  } else {
+    alert('Error: ' + data.error);
+  }
+}
+
+async function cancelSchedule(id) {
+  if (!confirm('Cancel this scheduled post?')) return;
+  await fetch('/post/' + id + '/unschedule', { method: 'POST' });
+  location.reload();
 }
 
 /* ── Toggle used ── */
 async function toggleUsed(id) {
-  var resp = await fetch('/post/' + id + '/toggle', { method: 'POST' });
-  if (!resp.ok) return;
-  var data = await resp.json();
-  var card = document.getElementById('post-' + id);
+  const resp = await fetch('/post/' + id + '/toggle', { method: 'POST' });
+  const data = await resp.json();
+  const card = document.getElementById('post-' + id);
   card.classList.toggle('used', data.is_used);
-  var btn = document.getElementById('used-btn-' + id);
-  btn.textContent = data.is_used ? 'Unmark' : 'Mark Used';
+  document.getElementById('used-btn-' + id).textContent = data.is_used ? 'Unmark' : 'Mark Used';
 }
 
-/* ── Delete post ── */
+/* ── Delete ── */
 async function deletePost(id) {
   if (!confirm('Delete this post?')) return;
-  var resp = await fetch('/post/' + id + '/delete', { method: 'POST' });
-  if (resp.ok) document.getElementById('post-' + id).remove();
+  await fetch('/post/' + id + '/delete', { method: 'POST' });
+  document.getElementById('post-' + id).remove();
 }
 
-/* ── Open edit modal ── */
+/* ── Edit ── */
 function openEdit(id) {
-  var caption  = document.getElementById('cap-'  + id) ? document.getElementById('cap-'  + id).innerText : '';
-  var hashtags = document.getElementById('tags-' + id) ? document.getElementById('tags-' + id).innerText : '';
   document.getElementById('editPostId').value   = id;
-  document.getElementById('editCaption').value  = caption;
-  document.getElementById('editHashtags').value = hashtags;
+  document.getElementById('editCaption').value  = document.getElementById('cap-' + id)?.innerText || '';
+  document.getElementById('editHashtags').value = document.getElementById('tags-' + id)?.innerText || '';
   showModal('editModal');
 }
-
-/* ── Save edit ── */
 async function saveEdit() {
-  var id       = document.getElementById('editPostId').value;
-  var caption  = document.getElementById('editCaption').value;
-  var hashtags = document.getElementById('editHashtags').value;
-  var resp = await fetch('/post/' + id + '/edit', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ caption: caption, hashtags: hashtags })
+  const id  = document.getElementById('editPostId').value;
+  const cap = document.getElementById('editCaption').value;
+  const tag = document.getElementById('editHashtags').value;
+  await fetch('/post/' + id + '/edit', {
+    method: 'POST', headers: {'Content-Type':'application/json'},
+    body: JSON.stringify({ caption: cap, hashtags: tag }),
   });
-  if (!resp.ok) { alert('Save failed.'); return; }
-  var capEl  = document.getElementById('cap-'  + id);
-  var tagsEl = document.getElementById('tags-' + id);
-  if (capEl)  capEl.innerText  = caption;
-  if (tagsEl) { tagsEl.innerText = hashtags; tagsEl.style.display = hashtags ? '' : 'none'; }
+  document.getElementById('cap-'  + id).innerText = cap;
+  document.getElementById('tags-' + id).innerText = tag;
   hideModal('editModal');
 }
 
-/* ── Generate single post ── */
+/* ── Single post ── */
 async function generateSingle(btn) {
-  var type     = document.getElementById('singleType').value;
-  var platform = document.getElementById('singlePlatform').value;
-  var context  = document.getElementById('singleContext').value;
-
+  const type     = document.getElementById('singleType').value;
+  const platform = document.getElementById('singlePlatform').value;
+  const context  = document.getElementById('singleContext').value;
   btn.disabled = true; btn.textContent = 'Generating...';
-
-  var fd = new FormData();
-  fd.append('post_type', type);
-  fd.append('platform',  platform);
-  fd.append('context',   context);
-
+  const fd = new FormData();
+  fd.append('post_type', type); fd.append('platform', platform); fd.append('context', context);
   try {
-    var resp = await fetch('/business/' + BIZ_ID + '/single', { method: 'POST', body: fd });
-    if (!resp.ok) throw new Error('Server error ' + resp.status);
-    var data = await resp.json();
-    if (data.error) throw new Error(data.error);
-
+    const resp = await fetch('/business/' + BIZ_ID + '/single', { method: 'POST', body: fd });
+    if (!resp.ok) throw new Error('Server error');
+    const data = await resp.json();
     document.getElementById('singleCaption').innerText  = data.caption  || '';
     document.getElementById('singleHashtags').innerText = data.hashtags || '';
-    document.getElementById('singleImage').innerText    = data.image_prompt ? 'Image idea: ' + data.image_prompt : '';
     document.getElementById('singleResult').style.display = 'block';
     window._singleData = data;
-  } catch(e) {
-    alert('Generation failed: ' + e.message);
-  }
-
-  btn.disabled = false; btn.textContent = 'Generate Post';
+  } catch(e) { alert('Error: ' + e.message); }
+  btn.disabled = false; btn.textContent = 'Generate';
 }
-
 function copySingle() {
-  var d = window._singleData || {};
-  var text = (d.caption || '') + (d.hashtags ? '\n\n' + d.hashtags : '');
-  navigator.clipboard.writeText(text);
+  const d = window._singleData || {};
+  navigator.clipboard.writeText((d.caption||'') + (d.hashtags ? '\n\n'+d.hashtags : ''));
 }
 
 /* ── Festival post ── */
 async function generateFestival(btn) {
-  var festival = document.getElementById('festivalSelect').value;
+  const festival = document.getElementById('festivalSelect').value;
   btn.disabled = true; btn.textContent = 'Generating...';
-
-  var fd = new FormData();
-  fd.append('festival', festival);
-
+  const fd = new FormData(); fd.append('festival', festival);
   try {
-    var resp = await fetch('/business/' + BIZ_ID + '/festival', { method: 'POST', body: fd });
-    if (!resp.ok) throw new Error('Server error ' + resp.status);
-    var data = await resp.json();
-    if (data.error) throw new Error(data.error);
-
+    const resp = await fetch('/business/' + BIZ_ID + '/festival', { method: 'POST', body: fd });
+    const data = await resp.json();
     document.getElementById('festivalCaption').innerText  = data.caption  || '';
     document.getElementById('festivalHashtags').innerText = data.hashtags || '';
-    document.getElementById('festivalImage').innerText    = data.image_prompt ? 'Image idea: ' + data.image_prompt : '';
     document.getElementById('festivalResult').style.display = 'block';
     window._festivalData = data;
-  } catch(e) {
-    alert('Generation failed: ' + e.message);
-  }
-
-  btn.disabled = false; btn.textContent = 'Generate Festival Post';
+  } catch(e) { alert('Error: ' + e.message); }
+  btn.disabled = false; btn.textContent = 'Generate';
 }
-
 function copyFestival() {
-  var d = window._festivalData || {};
-  var text = (d.caption || '') + (d.hashtags ? '\n\n' + d.hashtags : '');
-  navigator.clipboard.writeText(text);
+  const d = window._festivalData || {};
+  navigator.clipboard.writeText((d.caption||'') + (d.hashtags ? '\n\n'+d.hashtags : ''));
 }
 
 /* ── A/B Variants ── */
 async function generateVariants(btn) {
-  var topic = document.getElementById('variantTopic').value.trim();
-  if (!topic) { alert('Please enter a topic first.'); return; }
-
-  btn.disabled = true; btn.textContent = 'Generating 3 variants...';
-
-  var fd = new FormData();
-  fd.append('topic',    topic);
-  fd.append('platform', 'instagram');
-
+  const topic = document.getElementById('variantTopic').value.trim();
+  if (!topic) { alert('Enter a topic first.'); return; }
+  btn.disabled = true; btn.textContent = 'Generating...';
+  const fd = new FormData(); fd.append('topic', topic); fd.append('platform', 'instagram');
   try {
-    var resp = await fetch('/business/' + BIZ_ID + '/variants', { method: 'POST', body: fd });
-    if (!resp.ok) throw new Error('Server error ' + resp.status);
-    var data = await resp.json();
-    var variants = data.variants || [];
-
-    var container = document.getElementById('variantsResult');
+    const resp = await fetch('/business/' + BIZ_ID + '/variants', { method: 'POST', body: fd });
+    const data = await resp.json();
+    const container = document.getElementById('variantsResult');
     container.innerHTML = '';
-
-    variants.forEach(function(v) {
-      var varId = String(v.variant || '');
-
-      var div = document.createElement('div');
-      div.className = 'result-box mb-8';
-
-      var header = document.createElement('div');
-      header.style.cssText = 'display:flex;justify-content:space-between;margin-bottom:8px';
-
-      var badge = document.createElement('span');
-      badge.className = 'badge badge-blue';
-      badge.textContent = 'Variant ' + varId;
-
-      var hookStyle = document.createElement('span');
-      hookStyle.className = 'text-muted';
-      hookStyle.style.fontSize = '11px';
-      hookStyle.textContent = v.hook_style || '';
-
-      header.appendChild(badge);
-      header.appendChild(hookStyle);
-
-      var caption = document.createElement('div');
-      caption.className = 'post-caption';
-      caption.style.marginBottom = '8px';
-      caption.id = 'var-cap-' + varId;
-      caption.textContent = v.caption || '';
-
-      var hashtags = document.createElement('div');
-      hashtags.className = 'post-hashtags';
-      hashtags.id = 'var-tags-' + varId;
-      hashtags.textContent = v.hashtags || '';
-
-      var copyBtn = document.createElement('button');
-      copyBtn.className = 'btn btn-secondary btn-sm';
-      copyBtn.textContent = 'Copy';
-      copyBtn.onclick = (function(vid) {
-        return function() { copyVariant(vid); };
-      })(varId);
-
-      div.appendChild(header);
-      div.appendChild(caption);
-      div.appendChild(hashtags);
-      div.appendChild(copyBtn);
+    (data.variants || []).forEach(function(v) {
+      const div = document.createElement('div');
+      div.className = 'result-box';
+      div.style.marginBottom = '8px';
+      div.innerHTML =
+        '<div style="display:flex;justify-content:space-between;margin-bottom:6px">' +
+          '<span class="badge badge-blue">Variant ' + (v.variant||'') + '</span>' +
+          '<span class="text-muted" style="font-size:11px">' + (v.hook_style||'') + '</span>' +
+        '</div>' +
+        '<div id="vc-'+(v.variant||'')+'" style="font-size:12px;line-height:1.5;margin-bottom:6px">' + (v.caption||'') + '</div>' +
+        '<div id="vt-'+(v.variant||'')+'" style="font-size:11px;color:var(--blue)">' + (v.hashtags||'') + '</div>' +
+        '<button class="btn btn-secondary btn-sm" style="margin-top:8px" onclick="copyVar(\'' + (v.variant||'') + '\')">Copy</button>';
       container.appendChild(div);
     });
-
-    window._variantsData = variants;
-  } catch(e) {
-    alert('Generation failed: ' + e.message);
-  }
-
+  } catch(e) { alert('Error: ' + e.message); }
   btn.disabled = false; btn.textContent = 'Generate 3 Variants';
 }
-
-function copyVariant(variantId) {
-  var capEl  = document.getElementById('var-cap-'  + variantId);
-  var tagsEl = document.getElementById('var-tags-' + variantId);
-  var text = (capEl ? capEl.innerText : '') + (tagsEl && tagsEl.innerText ? '\n\n' + tagsEl.innerText : '');
-  navigator.clipboard.writeText(text);
+function copyVar(id) {
+  const cap  = document.getElementById('vc-' + id)?.innerText || '';
+  const tags = document.getElementById('vt-' + id)?.innerText || '';
+  navigator.clipboard.writeText(cap + (tags ? '\n\n' + tags : ''));
 }
 </script>
 {% endblock %}
